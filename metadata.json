@@ -1,0 +1,9 @@
+{
+  "name": "VERA Companion",
+  "description": "An AI-powered personal safety application featuring safety status monitoring, emergency dispatch requests, trusted contact management, and AI emergency summary generation.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
