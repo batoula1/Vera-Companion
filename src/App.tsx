@@ -24,8 +24,9 @@ import { SettingsScreen } from './components/SettingsScreen';
 import { OnboardingScreen } from './components/OnboardingScreen';
 import { HistoryScreen } from './components/HistoryScreen';
 import { Navbar } from './components/Navbar';
-import { Shield } from 'lucide-react';
+import { Shield, Radio } from 'lucide-react';
 import { addDoc, updateDoc } from './lib/firebase';
+import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -605,179 +606,203 @@ export default function App() {
 
   if (authChecking) {
     return (
-      <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
-        <div className="w-16 h-16 rounded-3xl bg-violet-600/30 border border-violet-500/50 flex items-center justify-center mb-4 animate-pulse">
-          <Shield className="w-8 h-8 text-violet-400" />
+      <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-violet-950/20 via-slate-950 to-slate-950 pointer-events-none" />
+        <div className="relative z-10 flex flex-col items-center text-center">
+          <div className="relative mb-5">
+            <div className="absolute inset-0 bg-violet-500/20 rounded-3xl blur-2xl animate-pulse" />
+            <div className="w-20 h-20 rounded-3xl bg-slate-900 border border-violet-500/40 shadow-2xl flex items-center justify-center relative z-10">
+              <Shield className="w-10 h-10 text-violet-400 animate-pulse" />
+            </div>
+          </div>
+          <h2 className="text-2xl font-black text-white tracking-tight">VERA Companion</h2>
+          <p className="text-xs font-semibold text-violet-400 uppercase tracking-widest mt-1">AI Safety Guardian</p>
+          <div className="flex items-center gap-2 mt-6 px-4 py-2 rounded-full bg-slate-900/90 border border-slate-800">
+            <Radio className="w-3.5 h-3.5 text-violet-400 animate-spin" />
+            <span className="text-xs text-slate-300 font-medium">Initializing secure connection...</span>
+          </div>
         </div>
-        <h2 className="text-xl font-bold text-white">VERA Companion</h2>
-        <p className="text-xs text-violet-300 mt-1">Initializing AI Safety Guard...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 flex justify-center items-center sm:p-4 font-sans selection:bg-violet-500 selection:text-white">
+    <div className="min-h-screen bg-slate-950 sm:bg-slate-900 flex justify-center items-center sm:p-4 font-sans selection:bg-violet-500 selection:text-white">
       {/* Mobile Device Viewport Shell Container */}
-      <div className="w-full sm:max-w-md h-screen sm:h-[840px] bg-slate-950 sm:rounded-[2.5rem] sm:border-[8px] sm:border-slate-800 sm:shadow-2xl overflow-hidden relative flex flex-col">
+      <div className="w-full sm:max-w-md h-screen sm:h-[840px] bg-slate-950 sm:rounded-[2.5rem] sm:border-[8px] sm:border-slate-800/90 sm:shadow-2xl overflow-hidden relative flex flex-col">
         {/* Top Status Bar Decoration for Desktop Container */}
-        <div className="hidden sm:flex justify-between items-center px-6 py-2 bg-slate-950 text-[10px] text-slate-500 border-b border-slate-900 select-none z-30">
-          <span className="font-bold text-violet-400">VERA Companion v1.0</span>
-          <div className="w-12 h-3 bg-slate-900 rounded-full" />
-          <span>GPS Active • 100%</span>
+        <div className="hidden sm:flex justify-between items-center px-6 py-2.5 bg-slate-950 text-[10px] text-slate-400 border-b border-slate-900 select-none z-30">
+          <span className="font-bold text-violet-400 tracking-wider">VERA COMPANION</span>
+          <div className="w-12 h-3 bg-slate-900 rounded-full border border-slate-800" />
+          <span className="flex items-center gap-1 font-mono">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            GPS ACTIVE
+          </span>
         </div>
 
         {/* Dynamic Screen Renderer */}
         <main className="flex-1 overflow-y-auto relative">
-          {currentScreen === 'welcome' && (
-            <WelcomeScreen onSuccess={handleLoginSuccess} />
-          )}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentScreen + (activeScheduledFakeCall?.isRinging ? '-ringing' : '')}
+              initial={{ opacity: 0, y: 10, scale: 0.99 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.99 }}
+              transition={{ duration: 0.22, ease: [0.25, 1, 0.5, 1] }}
+              className="h-full"
+            >
+              {currentScreen === 'welcome' && (
+                <WelcomeScreen onSuccess={handleLoginSuccess} />
+              )}
 
-          {currentScreen === 'onboarding' && user && (
-            <OnboardingScreen
-              user={user}
-              contacts={contacts}
-              onContactsChange={setContacts}
-              onCompleteOnboarding={handleFinishOnboarding}
-              onSkipOnboarding={handleFinishOnboarding}
-            />
-          )}
+              {currentScreen === 'onboarding' && user && (
+                <OnboardingScreen
+                  user={user}
+                  contacts={contacts}
+                  onContactsChange={setContacts}
+                  onCompleteOnboarding={handleFinishOnboarding}
+                  onSkipOnboarding={handleFinishOnboarding}
+                />
+              )}
 
-          {currentScreen === 'home' && user && (
-            <HomeScreen
-              user={user}
-              contacts={contacts}
-              onNavigate={(s) => {
-                if (s === 'emergency') {
-                  setAutoEmergencyConfig({ autoStartSOS: false });
-                }
-                setCurrentScreen(s);
-              }}
-              onUpdateUser={handleUpdateUser}
-              onLogout={handleLogout}
-              activeCheckInSummary={
-                activeCheckIn?.isActive
-                  ? {
-                      isActive: true,
-                      remainingText: `${Math.floor(activeCheckIn.remainingSeconds / 60)}m remaining`
+              {currentScreen === 'home' && user && (
+                <HomeScreen
+                  user={user}
+                  contacts={contacts}
+                  onNavigate={(s) => {
+                    if (s === 'emergency') {
+                      setAutoEmergencyConfig({ autoStartSOS: false });
                     }
-                  : undefined
-              }
-              activeSafeWalkSummary={
-                activeSafeWalk?.isActive
-                  ? {
-                      isActive: true,
-                      destination: activeSafeWalk.destination,
-                      remainingText: `${Math.floor(activeSafeWalk.remainingSeconds / 60)}m to ${activeSafeWalk.destination}`
-                    }
-                  : undefined
-              }
-              activeFakeCallSummary={
-                activeScheduledFakeCall
-                  ? {
-                      isScheduled: true,
-                      callerName: activeScheduledFakeCall.callerName,
-                      remainingText: activeScheduledFakeCall.isRinging
-                        ? 'Ringing...'
-                        : activeScheduledFakeCall.isInCall
-                        ? 'In Call'
-                        : `${activeScheduledFakeCall.remainingSeconds}s (${activeScheduledFakeCall.callerName})`
-                    }
-                  : undefined
-              }
-            />
-          )}
+                    setCurrentScreen(s);
+                  }}
+                  onUpdateUser={handleUpdateUser}
+                  onLogout={handleLogout}
+                  activeCheckInSummary={
+                    activeCheckIn?.isActive
+                      ? {
+                          isActive: true,
+                          remainingText: `${Math.floor(activeCheckIn.remainingSeconds / 60)}m remaining`
+                        }
+                      : undefined
+                  }
+                  activeSafeWalkSummary={
+                    activeSafeWalk?.isActive
+                      ? {
+                          isActive: true,
+                          destination: activeSafeWalk.destination,
+                          remainingText: `${Math.floor(activeSafeWalk.remainingSeconds / 60)}m to ${activeSafeWalk.destination}`
+                        }
+                      : undefined
+                  }
+                  activeFakeCallSummary={
+                    activeScheduledFakeCall
+                      ? {
+                          isScheduled: true,
+                          callerName: activeScheduledFakeCall.callerName,
+                          remainingText: activeScheduledFakeCall.isRinging
+                            ? 'Ringing...'
+                            : activeScheduledFakeCall.isInCall
+                            ? 'In Call'
+                            : `${activeScheduledFakeCall.remainingSeconds}s (${activeScheduledFakeCall.callerName})`
+                        }
+                      : undefined
+                  }
+                />
+              )}
 
-          {/* Fake Call Screen or Overlay */}
-          {(currentScreen === 'fake_call' || activeScheduledFakeCall?.isRinging || activeScheduledFakeCall?.isInCall) && user && (
-            <FakeCallScreen
-              user={user}
-              onBack={() => setCurrentScreen('home')}
-              activeScheduledCall={activeScheduledFakeCall}
-              onScheduleCall={handleScheduleFakeCall}
-              onCancelScheduledCall={handleCancelScheduledFakeCall}
-              onTriggerCallNow={handleTriggerFakeCallNow}
-              onAnswerCall={handleAnswerFakeCall}
-              onDeclineCall={handleDeclineFakeCall}
-              onEndCall={handleEndFakeCall}
-            />
-          )}
+              {/* Fake Call Screen or Overlay */}
+              {(currentScreen === 'fake_call' || activeScheduledFakeCall?.isRinging || activeScheduledFakeCall?.isInCall) && user && (
+                <FakeCallScreen
+                  user={user}
+                  onBack={() => setCurrentScreen('home')}
+                  activeScheduledCall={activeScheduledFakeCall}
+                  onScheduleCall={handleScheduleFakeCall}
+                  onCancelScheduledCall={handleCancelScheduledFakeCall}
+                  onTriggerCallNow={handleTriggerFakeCallNow}
+                  onAnswerCall={handleAnswerFakeCall}
+                  onDeclineCall={handleDeclineFakeCall}
+                  onEndCall={handleEndFakeCall}
+                />
+              )}
 
-          {currentScreen === 'emergency' && user && (
-            <EmergencyScreen
-              user={user}
-              contacts={contacts}
-              onBack={() => {
-                setAutoEmergencyConfig({ autoStartSOS: false });
-                setCurrentScreen('home');
-              }}
-              onEmergencyTriggered={handleEmergencyTriggered}
-              autoStartSOS={autoEmergencyConfig.autoStartSOS}
-              triggerSource={autoEmergencyConfig.triggerSource}
-              checkInNote={autoEmergencyConfig.checkInNote}
-            />
-          )}
+              {currentScreen === 'emergency' && user && (
+                <EmergencyScreen
+                  user={user}
+                  contacts={contacts}
+                  onBack={() => {
+                    setAutoEmergencyConfig({ autoStartSOS: false });
+                    setCurrentScreen('home');
+                  }}
+                  onEmergencyTriggered={handleEmergencyTriggered}
+                  autoStartSOS={autoEmergencyConfig.autoStartSOS}
+                  triggerSource={autoEmergencyConfig.triggerSource}
+                  checkInNote={autoEmergencyConfig.checkInNote}
+                />
+              )}
 
-          {currentScreen === 'safe_walk' && user && (
-            <SafeWalkScreen
-              user={user}
-              onBack={() => setCurrentScreen('home')}
-              onTriggerEmergency={handleTriggerEmergencyFromSafeWalk}
-              activeTrip={activeSafeWalk}
-              onStartTrip={handleStartSafeWalk}
-              onEndTrip={handleEndSafeWalk}
-              onRespondSafe={handleRespondSafeWalkSafe}
-              onExtendTrip={handleExtendSafeWalk}
-            />
-          )}
+              {currentScreen === 'safe_walk' && user && (
+                <SafeWalkScreen
+                  user={user}
+                  onBack={() => setCurrentScreen('home')}
+                  onTriggerEmergency={handleTriggerEmergencyFromSafeWalk}
+                  activeTrip={activeSafeWalk}
+                  onStartTrip={handleStartSafeWalk}
+                  onEndTrip={handleEndSafeWalk}
+                  onRespondSafe={handleRespondSafeWalkSafe}
+                  onExtendTrip={handleExtendSafeWalk}
+                />
+              )}
 
-          {currentScreen === 'safety_checkin' && user && (
-            <SafetyCheckInScreen
-              user={user}
-              onBack={() => setCurrentScreen('home')}
-              onTriggerEmergency={handleTriggerEmergencyFromCheckIn}
-              activeCheckIn={activeCheckIn}
-              onStartCheckIn={handleStartCheckIn}
-              onCancelCheckIn={handleCancelCheckIn}
-              onRespondSafe={handleRespondSafe}
-              onExtendCheckIn={handleExtendCheckIn}
-            />
-          )}
+              {currentScreen === 'safety_checkin' && user && (
+                <SafetyCheckInScreen
+                  user={user}
+                  onBack={() => setCurrentScreen('home')}
+                  onTriggerEmergency={handleTriggerEmergencyFromCheckIn}
+                  activeCheckIn={activeCheckIn}
+                  onStartCheckIn={handleStartCheckIn}
+                  onCancelCheckIn={handleCancelCheckIn}
+                  onRespondSafe={handleRespondSafe}
+                  onExtendCheckIn={handleExtendCheckIn}
+                />
+              )}
 
-          {currentScreen === 'contacts' && user && (
-            <TrustedContactsScreen
-              userId={user.uid}
-              contacts={contacts}
-              onContactsChange={setContacts}
-              onBack={() => setCurrentScreen('home')}
-            />
-          )}
+              {currentScreen === 'contacts' && user && (
+                <TrustedContactsScreen
+                  userId={user.uid}
+                  contacts={contacts}
+                  onContactsChange={setContacts}
+                  onBack={() => setCurrentScreen('home')}
+                />
+              )}
 
-          {currentScreen === 'ai_summary' && latestSummary && (
-            <AISummaryScreen
-              summary={latestSummary}
-              onReturnHome={() => setCurrentScreen('home')}
-            />
-          )}
+              {currentScreen === 'ai_summary' && latestSummary && (
+                <AISummaryScreen
+                  summary={latestSummary}
+                  onReturnHome={() => setCurrentScreen('home')}
+                />
+              )}
 
-          {currentScreen === 'settings' && user && (
-            <SettingsScreen
-              user={user}
-              contacts={contacts}
-              onContactsChange={setContacts}
-              onUpdateUser={handleUpdateUser}
-              onLogout={handleLogout}
-              onBack={() => setCurrentScreen('home')}
-              onReplayOnboarding={() => setCurrentScreen('onboarding')}
-            />
-          )}
+              {currentScreen === 'settings' && user && (
+                <SettingsScreen
+                  user={user}
+                  contacts={contacts}
+                  onContactsChange={setContacts}
+                  onUpdateUser={handleUpdateUser}
+                  onLogout={handleLogout}
+                  onBack={() => setCurrentScreen('home')}
+                  onReplayOnboarding={() => setCurrentScreen('onboarding')}
+                />
+              )}
 
-          {currentScreen === 'history' && user && (
-            <HistoryScreen
-              latestSummary={latestSummary}
-              onNavigate={setCurrentScreen}
-              onBack={() => setCurrentScreen('home')}
-            />
-          )}
+              {currentScreen === 'history' && user && (
+                <HistoryScreen
+                  latestSummary={latestSummary}
+                  onNavigate={setCurrentScreen}
+                  onBack={() => setCurrentScreen('home')}
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
         </main>
 
         {/* Navigation Bar */}

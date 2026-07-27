@@ -12,7 +12,8 @@ import {
   ShieldCheck, 
   ArrowLeft,
   Search,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 import { TrustedContact } from '../types';
 import { db, collection, addDoc, updateDoc, setDoc, deleteDoc, doc, getDocs, query, where } from '../lib/firebase';
@@ -40,7 +41,13 @@ export const TrustedContactsScreen: React.FC<TrustedContactsScreenProps> = ({
   const [email, setEmail] = useState('');
   const [isPrimary, setIsPrimary] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 2500);
+  };
 
   const resetForm = () => {
     setName('');
@@ -100,7 +107,7 @@ export const TrustedContactsScreen: React.FC<TrustedContactsScreenProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !phone.trim()) {
-      setError('Please provide a contact name and phone number.');
+      setError('Please provide a contact name and phone number so VERA can reach them during an emergency.');
       return;
     }
 
@@ -180,6 +187,7 @@ export const TrustedContactsScreen: React.FC<TrustedContactsScreenProps> = ({
         if (isRealUser) {
           await refreshFromFirestore();
         }
+        showToast('✓ Trusted Contact Updated');
       } else {
         // Create new contact
         const newTempId = 'contact-' + Date.now();
@@ -233,12 +241,13 @@ export const TrustedContactsScreen: React.FC<TrustedContactsScreenProps> = ({
         if (isRealUser) {
           await refreshFromFirestore();
         }
+        showToast('✓ Trusted Contact Added');
       }
 
       resetForm();
     } catch (err: any) {
       console.error('Error saving contact:', err);
-      setError('Failed to save contact to database.');
+      setError('We couldn’t save this contact right now. Please check your internet connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -249,6 +258,7 @@ export const TrustedContactsScreen: React.FC<TrustedContactsScreenProps> = ({
 
     const updatedList = contacts.filter(c => c.id !== contactId);
     onContactsChange(updatedList);
+    showToast('✓ Contact Removed');
 
     try {
       if (userId && !userId.startsWith('demo-')) {
@@ -265,33 +275,40 @@ export const TrustedContactsScreen: React.FC<TrustedContactsScreenProps> = ({
   };
 
   return (
-    <div className="min-h-full bg-slate-50 text-slate-900 pb-24">
+    <div className="min-h-full bg-slate-950 text-slate-100 p-4 sm:p-6 pb-28 space-y-6 max-w-2xl mx-auto select-none">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-900 border border-emerald-500/50 text-emerald-300 text-xs font-bold px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-200">
+          <Check className="w-4 h-4 text-emerald-400" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
       {/* Top Header */}
-      <div className="bg-gradient-to-r from-violet-900 to-indigo-900 text-white pt-6 pb-8 px-6 rounded-b-3xl shadow-lg">
-        <div className="flex justify-between items-center mb-4">
-          <button
-            type="button"
-            id="contacts-back-btn"
-            onClick={onBack}
-            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition flex items-center gap-1.5 text-xs font-bold"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Home</span>
-          </button>
-          <div className="flex items-center gap-1.5 text-xs font-bold bg-white/10 px-3 py-1 rounded-full">
-            <Users className="w-3.5 h-3.5 text-violet-300" />
-            <span>{contacts.length} Guardians</span>
-          </div>
+      <div className="flex justify-between items-center pb-3 border-b border-slate-800">
+        <button
+          type="button"
+          id="contacts-back-btn"
+          onClick={onBack}
+          className="p-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 flex items-center gap-2 text-xs font-bold transition shadow-md active:scale-95 cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 text-slate-400" />
+          <span>Return</span>
+        </button>
+
+        <div className="flex items-center gap-2">
+          <Users className="w-5 h-5 text-violet-400" />
+          <h1 className="text-base font-black text-white tracking-wider uppercase">
+            Trusted Contacts
+          </h1>
         </div>
 
-        <h1 className="text-2xl font-black text-white tracking-tight">Trusted Contacts</h1>
-        <p className="text-violet-200/80 text-xs mt-1">
-          These emergency contacts receive instant SMS & AI dispatch reports when SOS is triggered.
-        </p>
+        <div className="flex items-center gap-1.5 text-xs font-bold bg-violet-600/20 text-violet-300 border border-violet-500/30 px-3 py-1 rounded-full">
+          <span>{contacts.length} Guardians</span>
+        </div>
       </div>
 
       {/* Main Contact List Content */}
-      <div className="p-5 max-w-xl mx-auto space-y-4 -mt-3">
+      <div className="space-y-4">
         {/* Add Contact Button */}
         <button
           type="button"
@@ -300,20 +317,20 @@ export const TrustedContactsScreen: React.FC<TrustedContactsScreenProps> = ({
             resetForm();
             setShowAddModal(true);
           }}
-          className="w-full py-3.5 px-4 bg-violet-600 hover:bg-violet-700 active:scale-[0.99] text-white font-bold rounded-2xl shadow-lg shadow-violet-900/20 flex items-center justify-center gap-2 transition text-sm"
+          className="w-full py-3.5 px-4 bg-violet-600 hover:bg-violet-500 active:scale-[0.98] text-white font-bold rounded-2xl shadow-lg shadow-violet-950/50 flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer text-xs sm:text-sm border border-violet-500/30"
         >
           <UserPlus className="w-5 h-5" />
-          <span>Add Emergency Contact</span>
+          <span>Add Emergency Guardian Contact</span>
         </button>
 
         {/* Contacts List */}
         {contacts.length === 0 ? (
-          <div className="bg-white p-8 rounded-2xl border border-slate-200 text-center space-y-3 shadow-sm">
-            <div className="w-12 h-12 rounded-2xl bg-violet-100 text-violet-600 flex items-center justify-center mx-auto">
-              <Users className="w-6 h-6" />
+          <div className="bg-slate-900/90 p-8 rounded-3xl border border-slate-800 text-center space-y-3 shadow-xl">
+            <div className="w-14 h-14 rounded-2xl bg-violet-600/10 border border-violet-500/20 text-violet-400 flex items-center justify-center mx-auto">
+              <Users className="w-7 h-7" />
             </div>
-            <h3 className="text-sm font-bold text-slate-800">No Trusted Contacts Added Yet</h3>
-            <p className="text-xs text-slate-500 max-w-xs mx-auto">
+            <h3 className="text-sm font-bold text-white">No Emergency Contacts Added Yet</h3>
+            <p className="text-xs text-slate-400 max-w-xs mx-auto">
               Add family, friends, or trusted guardians who should be notified when you need help.
             </p>
           </div>
@@ -322,36 +339,36 @@ export const TrustedContactsScreen: React.FC<TrustedContactsScreenProps> = ({
             {contacts.map((contact) => (
               <div
                 key={contact.id}
-                className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition flex items-center justify-between gap-3"
+                className="bg-slate-900/90 p-4 rounded-3xl border border-slate-800 shadow-xl hover:border-slate-700 transition flex items-center justify-between gap-3"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-sm text-white shrink-0 shadow-sm ${
+                  <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-sm text-white shrink-0 shadow-md ${
                     contact.isPrimary 
-                      ? 'bg-gradient-to-tr from-violet-600 to-indigo-600' 
-                      : 'bg-slate-700'
+                      ? 'bg-gradient-to-tr from-violet-600 to-indigo-600 border border-violet-400/40' 
+                      : 'bg-slate-800 border border-slate-700'
                   }`}>
                     {contact.name.charAt(0).toUpperCase()}
                   </div>
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-bold text-slate-900 truncate">
+                      <h4 className="text-sm font-bold text-white truncate">
                         {contact.name}
                       </h4>
                       {contact.isPrimary && (
-                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 flex items-center gap-0.5">
-                          <Star className="w-2.5 h-2.5 fill-violet-700" /> Primary
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-400/30 flex items-center gap-0.5">
+                          <Star className="w-2.5 h-2.5 fill-violet-400" /> Primary
                         </span>
                       )}
                     </div>
                     
-                    <p className="text-xs text-slate-500 font-medium">
+                    <p className="text-xs text-slate-400 font-medium">
                       {contact.relationship}
                     </p>
 
-                    <div className="flex items-center gap-3 text-[11px] text-slate-600 mt-1">
+                    <div className="flex items-center gap-3 text-[11px] text-slate-300 mt-1">
                       <span className="flex items-center gap-1 font-mono">
-                        <Phone className="w-3 h-3 text-violet-600" /> {contact.phone}
+                        <Phone className="w-3 h-3 text-violet-400" /> {contact.phone}
                       </span>
                       {contact.email && (
                         <span className="hidden sm:flex items-center gap-1 truncate text-slate-400">
@@ -369,7 +386,7 @@ export const TrustedContactsScreen: React.FC<TrustedContactsScreenProps> = ({
                     id={`contacts-edit-btn-${contact.id}`}
                     onClick={() => openEditModal(contact)}
                     title="Edit Contact"
-                    className="p-2 rounded-xl text-slate-500 hover:text-violet-600 hover:bg-violet-50 transition"
+                    className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition active:scale-95 cursor-pointer"
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
@@ -378,7 +395,7 @@ export const TrustedContactsScreen: React.FC<TrustedContactsScreenProps> = ({
                     id={`contacts-delete-btn-${contact.id}`}
                     onClick={() => handleDelete(contact.id)}
                     title="Delete Contact"
-                    className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition"
+                    className="p-2 rounded-xl text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition active:scale-95 cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -391,32 +408,32 @@ export const TrustedContactsScreen: React.FC<TrustedContactsScreenProps> = ({
 
       {/* Add / Edit Contact Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-800 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center mb-5">
-              <h3 className="text-lg font-bold text-slate-900">
-                {editingContact ? 'Edit Trusted Contact' : 'Add Emergency Contact'}
+              <h3 className="text-lg font-bold text-white">
+                {editingContact ? 'Edit Trusted Guardian' : 'Add Emergency Guardian'}
               </h3>
               <button
                 type="button"
                 id="contacts-modal-close-btn"
                 onClick={resetForm}
-                className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100"
+                className="p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {error && (
-              <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+              <div className="mb-4 p-3 rounded-xl bg-red-500/20 border border-red-500/30 text-red-200 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
                 <span>{error}</span>
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Full Name</label>
+                <label className="block text-xs font-bold text-slate-300 mb-1">Full Name</label>
                 <input
                   type="text"
                   required
@@ -424,18 +441,18 @@ export const TrustedContactsScreen: React.FC<TrustedContactsScreenProps> = ({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Marcus Chen"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-violet-600 focus:ring-1 focus:ring-violet-600"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Relationship</label>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Relationship</label>
                   <select
                     id="contacts-modal-relationship-select"
                     value={relationship}
                     onChange={(e) => setRelationship(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-violet-600"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-violet-500"
                   >
                     <option value="Parent">Parent</option>
                     <option value="Partner">Partner / Spouse</option>
@@ -447,7 +464,7 @@ export const TrustedContactsScreen: React.FC<TrustedContactsScreenProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Phone Number</label>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Phone Number</label>
                   <input
                     type="tel"
                     required
@@ -455,20 +472,20 @@ export const TrustedContactsScreen: React.FC<TrustedContactsScreenProps> = ({
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="e.g. 555-0199"
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-violet-600"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-violet-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Email Address (Optional)</label>
+                <label className="block text-xs font-bold text-slate-300 mb-1">Email Address (Optional)</label>
                 <input
                   type="email"
                   id="contacts-modal-email-input"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="marcus@example.com"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-violet-600"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-violet-500"
                 />
               </div>
 
@@ -478,9 +495,9 @@ export const TrustedContactsScreen: React.FC<TrustedContactsScreenProps> = ({
                   id="contacts-modal-isprimary-checkbox"
                   checked={isPrimary}
                   onChange={(e) => setIsPrimary(e.target.checked)}
-                  className="w-4 h-4 rounded text-violet-600 focus:ring-violet-500 border-slate-300"
+                  className="w-4 h-4 rounded text-violet-600 focus:ring-violet-500 border-slate-700 bg-slate-950"
                 />
-                <label htmlFor="contacts-modal-isprimary-checkbox" className="text-xs font-semibold text-slate-700 cursor-pointer">
+                <label htmlFor="contacts-modal-isprimary-checkbox" className="text-xs font-semibold text-slate-300 cursor-pointer">
                   Set as Primary First Responder
                 </label>
               </div>
@@ -490,7 +507,7 @@ export const TrustedContactsScreen: React.FC<TrustedContactsScreenProps> = ({
                   type="button"
                   id="contacts-modal-cancel-btn"
                   onClick={resetForm}
-                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition"
+                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition active:scale-95 cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -498,9 +515,14 @@ export const TrustedContactsScreen: React.FC<TrustedContactsScreenProps> = ({
                   type="submit"
                   disabled={loading}
                   id="contacts-modal-submit-btn"
-                  className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl text-xs transition active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-violet-950/50"
                 >
-                  {loading ? 'Saving...' : editingContact ? 'Update Contact' : 'Save Contact'}
+                  {loading ? (
+                    <span className="flex items-center gap-1.5">
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      Saving Trusted Contact...
+                    </span>
+                  ) : editingContact ? 'Update Contact' : 'Save Contact'}
                 </button>
               </div>
             </form>

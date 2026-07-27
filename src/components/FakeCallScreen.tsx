@@ -62,6 +62,15 @@ export const FakeCallScreen: React.FC<FakeCallScreenProps> = ({
   const [selectedMessage, setSelectedMessage] = useState<string>(
     "Hi! I'm outside waiting for you. Are you almost here?"
   );
+  const [scheduleToast, setScheduleToast] = useState<string | null>(null);
+
+  const handleStartSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const finalCallerName = selectedCaller === 'Custom' ? (customCallerInput.trim() || 'Caller') : selectedCaller;
+    onScheduleCall(finalCallerName, selectedDelay, selectedRingtone, selectedMessage);
+    setScheduleToast('✓ Fake Call Scheduled');
+    setTimeout(() => setScheduleToast(null), 3000);
+  };
 
   // In-Call UI Controls
   const [isMuted, setIsMuted] = useState<boolean>(false);
@@ -162,11 +171,6 @@ export const FakeCallScreen: React.FC<FakeCallScreenProps> = ({
     selectedCaller === 'Custom' 
       ? (customCallerInput.trim() || 'Incoming Call') 
       : selectedCaller;
-
-  const handleStartSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onScheduleCall(effectiveCallerName, selectedDelay, selectedRingtone, selectedMessage);
-  };
 
   const formatTime = (secs: number) => {
     const mins = Math.floor(secs / 60);
@@ -322,7 +326,14 @@ export const FakeCallScreen: React.FC<FakeCallScreenProps> = ({
   }
 
   return (
-    <div className="min-h-full bg-slate-900 text-white flex flex-col justify-between p-5 relative pb-24">
+    <div className="min-h-full bg-slate-900 text-white flex flex-col justify-between p-5 relative pb-24 select-none">
+      {/* Toast Notification */}
+      {scheduleToast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-900 border border-emerald-500/50 text-emerald-300 text-xs font-bold px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-200">
+          <Check className="w-4 h-4 text-emerald-400" />
+          <span>{scheduleToast}</span>
+        </div>
+      )}
       {/* Header */}
       <div className="flex justify-between items-center z-10 mb-6">
         <button

@@ -187,14 +187,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       setSavingPrefs(true);
       try {
         await setDoc(doc(db, 'user_preferences', user.uid), updated, { merge: true });
-        showTempToast('Preference saved');
+        showTempToast('✓ Settings Saved');
       } catch (err) {
         console.warn('Failed to save user preference to Firestore:', err);
       } finally {
         setSavingPrefs(false);
       }
     } else {
-      showTempToast('Preference saved locally');
+      showTempToast('✓ Settings Saved');
     }
   };
 
@@ -295,7 +295,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
     setSavingProfile(false);
     setShowEditProfileModal(false);
-    showTempToast('Profile updated successfully');
+    showTempToast('✓ Profile Updated');
   };
 
   // Change Password
@@ -304,11 +304,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     setPasswordError(null);
 
     if (newPassword.length < 6) {
-      setPasswordError('Password must be at least 6 characters long');
+      setPasswordError('Password must be at least 6 characters long. Please choose a stronger password.');
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordError('Passwords do not match');
+      setPasswordError('Passwords do not match. Please ensure both fields match.');
       return;
     }
 
@@ -317,15 +317,15 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       if (auth.currentUser) {
         await updatePassword(auth.currentUser, newPassword);
         setPasswordResetSent(true);
-        showTempToast('Password updated successfully!');
+        showTempToast('✓ Password updated successfully!');
       } else {
         throw new Error('No active authenticated user session');
       }
     } catch (err: any) {
       if (err.code === 'auth/requires-recent-login') {
-        setPasswordError('For security, please sign out and log in again before changing your password.');
+        setPasswordError('For your security, please sign out and log in again before changing your password.');
       } else {
-        setPasswordError(err.message || 'Failed to update password');
+        setPasswordError('We couldn’t update your password right now. Please check your connection and try again.');
       }
     } finally {
       setUpdatingPasswordState(false);
@@ -341,7 +341,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         showTempToast(`Password reset link sent to ${user.email}`);
       }
     } catch (err: any) {
-      setPasswordError(err.message || 'Failed to send reset email');
+      setPasswordError('We couldn’t send the reset email right now. Please check your internet connection and try again.');
     }
   };
 
@@ -393,7 +393,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     setContactIsPrimary(false);
     setAddingContact(false);
     setShowAddContactModal(false);
-    showTempToast('Trusted contact added');
+    showTempToast('✓ Trusted Contact Added');
   };
 
   // Remove Contact
@@ -449,9 +449,18 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     <div className="min-h-full bg-slate-950 text-slate-100 pb-28 select-none">
       {/* Toast Notification */}
       {saveToast && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 border border-emerald-400/30 animate-in fade-in duration-200">
-          <Check className="w-4 h-4" />
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-2 border border-emerald-500/50 animate-in fade-in slide-in-from-top-4 duration-200">
+          <Check className="w-4 h-4 text-emerald-400" />
           <span>{saveToast}</span>
+        </div>
+      )}
+
+      {loadingPrefs && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40 flex items-center justify-center p-6">
+          <div className="bg-slate-900 border border-violet-500/30 rounded-2xl px-6 py-4 shadow-2xl flex items-center gap-3">
+            <Radio className="w-5 h-5 text-violet-400 animate-spin" />
+            <span className="text-xs font-bold text-white">Loading Settings...</span>
+          </div>
         </div>
       )}
 

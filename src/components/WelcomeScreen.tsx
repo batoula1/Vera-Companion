@@ -7,8 +7,10 @@ import {
   ArrowRight, 
   Sparkles,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   auth, 
   signInWithEmailAndPassword, 
@@ -34,6 +36,8 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSuccess }) => {
   const [displayName, setDisplayName] = useState('');
   const [medicalNotes, setMedicalNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState<string>('Logging in...');
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const saveOrCreateUserProfile = async (uid: string, userEmail: string, name?: string): Promise<UserProfile> => {
@@ -99,7 +103,9 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSuccess }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setLoadingMessage(isSignUp ? 'Creating account...' : 'Logging in...');
     setError(null);
+    setSuccessMessage(null);
 
     try {
       if (isSignUp) {
@@ -111,14 +117,16 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSuccess }) => {
         }
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
         const profile = await saveOrCreateUserProfile(userCred.user.uid, userCred.user.email || email, displayName);
-        onSuccess(profile);
+        setSuccessMessage('✓ Account Created');
+        setTimeout(() => onSuccess(profile), 400);
       } else {
         if (!email || !password) {
           throw new Error('Please provide email and password.');
         }
         const userCred = await signInWithEmailAndPassword(auth, email, password);
         const profile = await saveOrCreateUserProfile(userCred.user.uid, userCred.user.email || email);
-        onSuccess(profile);
+        setSuccessMessage('✓ Logged In Successfully');
+        setTimeout(() => onSuccess(profile), 400);
       }
     } catch (err: any) {
       console.error('Auth error:', err);
@@ -126,12 +134,12 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSuccess }) => {
       const errMsg = err.message || '';
 
       if (errCode === 'auth/weak-password' || errMsg.includes('weak-password')) {
-        setError('Password must be at least 6 characters long.');
+        setError('Password must be at least 6 characters long. Please choose a stronger password to protect your account.');
       } else if (errCode === 'auth/email-already-in-use' || errMsg.includes('email-already-in-use')) {
-        setError('An account with this email already exists. Switched to Sign In mode so you can log in.');
+        setError('An account with this email address already exists. We’ve switched to Sign In mode so you can log in.');
         setIsSignUp(false);
       } else if (errCode === 'auth/invalid-email' || errMsg.includes('invalid-email')) {
-        setError('Please enter a valid email address.');
+        setError('Please enter a valid email address (e.g., name@example.com).');
       } else if (
         errCode === 'auth/wrong-password' || 
         errCode === 'auth/user-not-found' || 
@@ -141,12 +149,14 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSuccess }) => {
         errMsg.includes('invalid-credential')
       ) {
         if (!isSignUp) {
-          setError('Invalid email or password. If you do not have an account yet, switch to "Create an account" below.');
+          setError('Incorrect email or password. Please double-check your credentials, or switch to "Create an account" below.');
         } else {
-          setError('Invalid credentials provided. Please check your details or try Demo Mode.');
+          setError('We couldn’t create your account with those details. Please check your information or try Demo Mode.');
         }
+      } else if (errCode === 'auth/network-request-failed' || errMsg.includes('network')) {
+        setError('Connection lost. Please check your internet connection and try again.');
       } else {
-        setError(errMsg || 'Authentication failed. Try demo mode below.');
+        setError('We couldn’t complete your sign in. Please check your details or try instant Demo Mode below.');
       }
     } finally {
       setLoading(false);
@@ -155,7 +165,9 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSuccess }) => {
 
   const handleDemoSignIn = async () => {
     setLoading(true);
+    setLoadingMessage('Logging in...');
     setError(null);
+    setSuccessMessage(null);
     try {
       let uid = 'demo-user-' + Date.now();
       let email = 'sarah.m@veracompanion.io';
@@ -188,9 +200,10 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSuccess }) => {
         // ignore offline store write
       }
 
-      onSuccess(demoProfile);
+      setSuccessMessage('✓ Logged In Successfully');
+      setTimeout(() => onSuccess(demoProfile), 400);
     } catch (err: any) {
-      setError(err.message || 'Demo login failed');
+      setError('We couldn’t launch demo mode right now. Please check your connection or refresh the page.');
     } finally {
       setLoading(false);
     }
@@ -198,7 +211,9 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSuccess }) => {
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
+    setLoadingMessage('Logging in...');
     setError(null);
+    setSuccessMessage(null);
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
@@ -207,7 +222,8 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSuccess }) => {
         result.user.email || 'google.user@vera.ai',
         result.user.displayName || 'Google User'
       );
-      onSuccess(profile);
+      setSuccessMessage('✓ Logged In Successfully');
+      setTimeout(() => onSuccess(profile), 400);
     } catch (err: any) {
       console.warn('Google sign-in popup error, falling back to instant preview:', err);
       // Fall back to instant guest session if popup blocked in iframe
@@ -263,6 +279,17 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSuccess }) => {
               Sign In
             </button>
           </div>
+
+          {successMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center justify-center gap-2 shadow-lg"
+            >
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 animate-bounce" />
+              <span>{successMessage}</span>
+            </motion.div>
+          )}
 
           {error && (
             <div className="mb-4 p-3 rounded-xl bg-red-500/20 border border-red-500/30 text-red-200 text-xs flex items-center gap-2">
@@ -343,10 +370,13 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSuccess }) => {
               type="submit"
               disabled={loading}
               id="welcome-submit-btn"
-              className="w-full py-3 bg-violet-600 hover:bg-violet-500 active:scale-[0.98] text-white font-bold rounded-xl text-xs sm:text-sm shadow-xl shadow-violet-950/50 flex items-center justify-center gap-2 transition"
+              className="w-full py-3 bg-violet-600 hover:bg-violet-500 active:scale-[0.98] text-white font-bold rounded-xl text-xs sm:text-sm shadow-xl shadow-violet-950/50 flex items-center justify-center gap-2 transition cursor-pointer"
             >
               {loading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span>{loadingMessage}</span>
+                </div>
               ) : (
                 <>
                   <span>{isSignUp ? 'Create VERA Account' : 'Sign In'}</span>

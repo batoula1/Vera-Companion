@@ -50,6 +50,8 @@ export const EmergencyScreen: React.FC<EmergencyScreenProps> = ({
   checkInNote
 }) => {
   const [isTriggering, setIsTriggering] = useState(false);
+  const [triggerStepText, setTriggerStepText] = useState<string>('Generating AI Emergency Report...');
+  const [showSuccessToast, setShowSuccessToast] = useState<boolean>(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [locationFailed, setLocationFailed] = useState<boolean>(false);
@@ -340,7 +342,7 @@ export const EmergencyScreen: React.FC<EmergencyScreenProps> = ({
             longitude: null,
             accuracy: null,
             timestamp: new Date().toISOString(),
-            address: "Location unavailable due to denied permission.",
+            address: "Location Services disabled. Enable permissions in your browser.",
             isPermissionDenied
           });
         },
@@ -356,6 +358,7 @@ export const EmergencyScreen: React.FC<EmergencyScreenProps> = ({
   const handleActivateSOS = async () => {
     setShowConfirmModal(false);
     setIsTriggering(true);
+    setTriggerStepText('Generating AI Emergency Report...');
     setErrorMessage(null);
     setLocationFailed(false);
 
@@ -376,13 +379,14 @@ export const EmergencyScreen: React.FC<EmergencyScreenProps> = ({
         setLocationFailed(true);
         setCurrentLocationAddress(null);
         if (gpsData.isPermissionDenied) {
-          setErrorMessage('Location permission denied.');
+          setErrorMessage('Location permission is required to protect you during emergencies. Please enable Location Services.');
         } else {
           setErrorMessage(null);
         }
       }
 
       console.log('Report generation started');
+      setTriggerStepText('Generating AI Emergency Report...');
 
       // 2. Retrieve authenticated user's profile and medical notes from Firestore
       let userName = user.displayName || 'User';
@@ -513,7 +517,10 @@ export const EmergencyScreen: React.FC<EmergencyScreenProps> = ({
       const finalMapsLink = `https://www.google.com/maps?q=${finalLat},${finalLng}`;
 
       // Finalize evidence recording
+      setTriggerStepText('Uploading Emergency Evidence...');
       const evidenceResult = finalizeEmergencyRecording();
+
+      setTriggerStepText('Saving Emergency Evidence...');
 
       // 5. Save all location information into Firestore: latitude, longitude, address, accuracy
       if (user.uid && !user.uid.startsWith('demo-')) {
@@ -619,10 +626,10 @@ export const EmergencyScreen: React.FC<EmergencyScreenProps> = ({
       setLocationFailed(true);
       setCurrentLocationAddress(null);
       // Requirement 7: If permission is denied, clearly display "Location permission denied."
-      if (err.message === 'Location permission denied.') {
-        setErrorMessage('Location permission denied.');
+      if (err.message === 'Location permission denied.' || err.message?.includes('Location permission')) {
+        setErrorMessage('Location permission is required to protect you during emergencies. Please enable Location Services.');
       } else {
-        setErrorMessage('Emergency report could not be generated. Please try again.');
+        setErrorMessage('We couldn’t complete your request right now. Please check your internet connection and try again.');
       }
     } finally {
       setIsTriggering(false);
@@ -639,7 +646,35 @@ export const EmergencyScreen: React.FC<EmergencyScreenProps> = ({
 
   return (
     <div className="min-h-full bg-slate-950 text-white flex flex-col justify-between p-6 relative overflow-hidden pb-20">
-      {/* Background Warning Glow */}
+      {/* Triggering Processing Overlay */}
+      {isTriggering && (
+        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-red-500/30 rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl space-y-4 flex flex-col items-center">
+            <div className="relative">
+              <div className="w-16 h-16 rounded-2xl bg-red-500/20 border border-red-500/30 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-red-400 animate-spin" />
+              </div>
+              <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span>
+              </span>
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="text-base font-black text-white uppercase tracking-wider">
+                Emergency Dispatch Active
+              </h3>
+              <p className="text-xs font-bold text-red-400 flex items-center justify-center gap-1.5 animate-pulse">
+                <span>{triggerStepText}</span>
+              </p>
+            </div>
+
+            <p className="text-[11px] text-slate-400 leading-relaxed pt-1 border-t border-slate-800">
+              Gathering GPS location, analyzing incident details with Gemini AI, and securing emergency contacts.
+            </p>
+          </div>
+        </div>
+      )}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-red-600/20 rounded-full blur-3xl pointer-events-none" />
 
       {/* Top Header Navigation */}
@@ -674,7 +709,7 @@ export const EmergencyScreen: React.FC<EmergencyScreenProps> = ({
         {errorMessage && (
           <div className="mt-4 p-3 bg-red-950/90 border border-red-500/50 rounded-2xl text-red-200 text-xs font-semibold max-w-xs animate-in fade-in flex flex-col items-center gap-2">
             <span>{errorMessage}</span>
-            {errorMessage.includes('Location permission denied') && (
+            {(errorMessage.includes('Location permission') || errorMessage.includes('Location Services')) && (
               <button
                 type="button"
                 id="open-location-settings-btn"
@@ -689,7 +724,7 @@ export const EmergencyScreen: React.FC<EmergencyScreenProps> = ({
                 }}
                 className="w-full py-2 px-3 bg-red-800 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition shadow"
               >
-                Open Browser Location Settings
+                Enable Location Services
               </button>
             )}
           </div>
@@ -823,7 +858,7 @@ export const EmergencyScreen: React.FC<EmergencyScreenProps> = ({
 
           {mediaPermissionStatus === 'denied' && (
             <p className="text-[10px] text-amber-300 bg-amber-950/40 p-2 rounded-lg border border-amber-500/30">
-              Microphone/Camera permission declined. Grant permission in browser settings to record emergency evidence.
+              VERA couldn’t access your camera or microphone. Please check your device permissions in browser settings to record evidence.
             </p>
           )}
 

@@ -225,6 +225,22 @@ ${summary.notifiedContacts.map(c => `- ${c.name} (${c.phone})`).join('\n')}`;
 
   return (
     <div className="min-h-full bg-slate-950 text-slate-100 p-4 sm:p-6 pb-28 space-y-6 max-w-2xl mx-auto select-none">
+      {/* Success Notification Banner */}
+      <div className="bg-emerald-950/80 border border-emerald-500/50 rounded-2xl p-3 px-4 flex items-center justify-between shadow-lg animate-in fade-in slide-in-from-top-3 duration-300">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-xs font-black text-emerald-300 block uppercase tracking-wide">
+              ✓ Emergency Report Generated
+            </span>
+            <span className="text-[11px] text-emerald-200/80 font-medium">
+              Report synced & emergency notifications dispatched to contacts
+            </span>
+          </div>
+        </div>
+      </div>
       
       {/* 1. VERA Companion - Top Header Navigation */}
       <div className="flex justify-between items-center pb-3 border-b border-slate-800">

@@ -3,6 +3,7 @@ import {
   Clock, 
   ShieldCheck, 
   AlertTriangle, 
+  AlertCircle,
   ArrowLeft, 
   StickyNote, 
   Zap, 
@@ -51,6 +52,7 @@ export const SafetyCheckInScreen: React.FC<SafetyCheckInScreenProps> = ({
   const [customMinutes, setCustomMinutes] = useState<string>('45');
   const [optionalNote, setOptionalNote] = useState<string>('');
   const [isStarting, setIsStarting] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Prompt 60-second countdown
   const [promptCountdown, setPromptCountdown] = useState<number>(60);
@@ -92,15 +94,21 @@ export const SafetyCheckInScreen: React.FC<SafetyCheckInScreenProps> = ({
     }
   };
 
+  const [startToast, setStartToast] = useState<string | null>(null);
+
   const handleStartSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isStarting) return;
     setIsStarting(true);
+    setErrorMessage(null);
     try {
       const { label, seconds } = getDurationDetails();
       await onStartCheckIn(label, seconds, optionalNote);
+      setStartToast('✓ Safety Check-In Started');
+      setTimeout(() => setStartToast(null), 3000);
     } catch (err) {
       console.error('Failed to start check-in:', err);
+      setErrorMessage('We couldn’t start your safety check-in. Please check your internet connection and try again.');
     } finally {
       setIsStarting(false);
     }
@@ -119,7 +127,20 @@ export const SafetyCheckInScreen: React.FC<SafetyCheckInScreenProps> = ({
   };
 
   return (
-    <div className="min-h-full bg-slate-900 text-white flex flex-col justify-between p-5 relative pb-24">
+    <div className="min-h-full bg-slate-900 text-white flex flex-col justify-between p-5 relative pb-24 select-none">
+      {/* Toast Notification */}
+      {startToast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-900 border border-emerald-500/50 text-emerald-300 text-xs font-bold px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-200">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <span>{startToast}</span>
+        </div>
+      )}
+      {errorMessage && (
+        <div className="mb-4 p-3 bg-red-950/90 border border-red-500/50 rounded-2xl text-red-200 text-xs font-semibold animate-in fade-in flex items-center gap-2 z-20">
+          <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
       {/* Header */}
       <div className="flex justify-between items-center z-10 mb-6">
         <button
@@ -277,7 +298,7 @@ export const SafetyCheckInScreen: React.FC<SafetyCheckInScreenProps> = ({
               className="w-full py-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-black rounded-2xl text-xs uppercase tracking-wider shadow-xl shadow-violet-950/80 transition active:scale-[0.98] flex items-center justify-center gap-2 border border-violet-400/30"
             >
               <Zap className="w-4 h-4 text-violet-200" />
-              <span>{isStarting ? 'Starting Check-In...' : 'Start Check-In'}</span>
+              <span>{isStarting ? 'Starting Safety Check-In...' : 'Start Safety Check-In'}</span>
             </button>
           </form>
         ) : (

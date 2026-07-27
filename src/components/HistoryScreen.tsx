@@ -38,42 +38,49 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
 }) => {
   const [filter, setFilter] = useState<'all' | 'emergency' | 'checkin' | 'safewalk' | 'fakecall'>('all');
   const [logs, setLogs] = useState<ActivityLogItem[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(true);
 
   useEffect(() => {
-    const items: ActivityLogItem[] = [];
+    setIsLoadingHistory(true);
+    const timer = setTimeout(() => {
+      const items: ActivityLogItem[] = [];
 
-    if (latestSummary) {
-      items.push({
-        id: `summary-${latestSummary.incidentId}`,
-        type: 'emergency',
-        title: `AI Emergency Report #${latestSummary.incidentId}`,
-        description: latestSummary.summaryText.length > 90 ? latestSummary.summaryText.substring(0, 90) + '...' : latestSummary.summaryText,
-        timestamp: latestSummary.timestamp,
-        status: latestSummary.status || 'ACTIVE'
-      });
-    }
-
-    try {
-      const stored = localStorage.getItem('vera_activity_history');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          parsed.forEach((p, idx) => {
-            items.push({
-              id: `log-${idx}-${p.title}`,
-              type: p.type || 'checkin',
-              title: p.title || 'Safety Event',
-              description: p.description || '',
-              timestamp: p.time || new Date().toISOString()
-            });
-          });
-        }
+      if (latestSummary) {
+        items.push({
+          id: `summary-${latestSummary.incidentId}`,
+          type: 'emergency',
+          title: `AI Emergency Report #${latestSummary.incidentId}`,
+          description: latestSummary.summaryText.length > 90 ? latestSummary.summaryText.substring(0, 90) + '...' : latestSummary.summaryText,
+          timestamp: latestSummary.timestamp,
+          status: latestSummary.status || 'ACTIVE'
+        });
       }
-    } catch (e) {
-      // ignore
-    }
 
-    setLogs(items);
+      try {
+        const stored = localStorage.getItem('vera_activity_history');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((p, idx) => {
+              items.push({
+                id: `log-${idx}-${p.title}`,
+                type: p.type || 'checkin',
+                title: p.title || 'Safety Event',
+                description: p.description || '',
+                timestamp: p.time || new Date().toISOString()
+              });
+            });
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      setLogs(items);
+      setIsLoadingHistory(false);
+    }, 400);
+
+    return () => clearTimeout(timer);
   }, [latestSummary]);
 
   const filteredLogs = logs.filter(item => filter === 'all' || item.type === filter);
@@ -157,10 +164,10 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
             key={tab.key}
             type="button"
             onClick={() => setFilter(tab.key as any)}
-            className={`py-2 px-3.5 rounded-xl text-xs font-bold whitespace-nowrap transition border ${
+            className={`py-2 px-3.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 cursor-pointer active:scale-95 border ${
               filter === tab.key
-                ? 'bg-violet-600 border-violet-500 text-white shadow-md'
-                : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                ? 'bg-violet-600 border-violet-500 text-white shadow-lg shadow-violet-950/50'
+                : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'
             }`}
           >
             {tab.label}
@@ -169,13 +176,27 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
       </div>
 
       {/* History Items List */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-3">
-        {filteredLogs.length === 0 ? (
-          <div className="p-8 text-center space-y-2 bg-slate-950/60 rounded-2xl border border-slate-800/80">
-            <Layers className="w-8 h-8 text-slate-600 mx-auto" />
-            <p className="text-xs font-bold text-slate-400">
-              No activity logs recorded for this filter.
-            </p>
+      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-3">
+        {isLoadingHistory ? (
+          <div className="py-12 text-center space-y-3 flex flex-col items-center justify-center">
+            <div className="w-10 h-10 rounded-2xl bg-violet-500/20 border border-violet-500/30 flex items-center justify-center">
+              <Clock className="w-5 h-5 text-violet-400 animate-spin" />
+            </div>
+            <p className="text-xs font-bold text-slate-300 uppercase tracking-wider">Loading history...</p>
+          </div>
+        ) : filteredLogs.length === 0 ? (
+          <div className="p-8 text-center space-y-3 bg-slate-950/70 rounded-2xl border border-slate-800/80">
+            <div className="w-14 h-14 rounded-2xl bg-violet-600/10 border border-violet-500/20 flex items-center justify-center mx-auto text-violet-400">
+              <Layers className="w-7 h-7" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-slate-200">
+                No activity logs recorded
+              </p>
+              <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+                Safety check-ins, safe walk sessions, and AI emergency reports will automatically appear in your timeline.
+              </p>
+            </div>
           </div>
         ) : (
           <div className="space-y-3">

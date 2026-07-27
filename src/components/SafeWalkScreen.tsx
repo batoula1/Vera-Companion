@@ -107,10 +107,12 @@ export const SafeWalkScreen: React.FC<SafeWalkScreenProps> = ({
     }
   };
 
+  const [startToast, setStartToast] = useState<string | null>(null);
+
   const handleStartSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!destinationInput.trim()) {
-      setValidationError('Please enter your destination address or place name.');
+      setValidationError('Please enter your destination address or place name (e.g. "Main St Station" or "Home").');
       return;
     }
     setValidationError(null);
@@ -126,8 +128,11 @@ export const SafeWalkScreen: React.FC<SafeWalkScreenProps> = ({
         seconds,
         optionalNote.trim()
       );
+      setStartToast('✓ Safe Walk Started');
+      setTimeout(() => setStartToast(null), 3000);
     } catch (err) {
       console.error('Failed to start safe walk:', err);
+      setValidationError('We couldn’t start your trip right now. Please check your internet connection and try again.');
     } finally {
       setIsStarting(false);
     }
@@ -151,7 +156,14 @@ export const SafeWalkScreen: React.FC<SafeWalkScreenProps> = ({
   };
 
   return (
-    <div className="min-h-full bg-slate-900 text-white flex flex-col justify-between p-5 relative pb-24">
+    <div className="min-h-full bg-slate-900 text-white flex flex-col justify-between p-5 relative pb-24 select-none">
+      {/* Toast Notification */}
+      {startToast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-900 border border-emerald-500/50 text-emerald-300 text-xs font-bold px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-200">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <span>{startToast}</span>
+        </div>
+      )}
       {/* Header Bar */}
       <div className="flex justify-between items-center z-10 mb-6">
         <button
@@ -370,7 +382,7 @@ export const SafeWalkScreen: React.FC<SafeWalkScreenProps> = ({
               <Zap className="w-4 h-4 text-cyan-200" />
               <span>
                 {isStarting 
-                  ? 'Initiating Trip...' 
+                  ? `Starting Safe ${transportMode === 'driving' ? 'Drive' : 'Walk'}...` 
                   : `Start Safe ${transportMode === 'driving' ? 'Drive' : 'Walk'}`}
               </span>
             </button>
